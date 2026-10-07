@@ -37,6 +37,22 @@
       ];
       const grain = makeStars(0xc310a9f1, 360, 0, 0.15, 0.8);
 
+      // ---- 12 场景风格：色调 / 粒子密度 / 镜头运动 / 冲击抖动 ----
+      const SCENE_STYLE = [
+        { tint: [14, 16, 22], starAlpha: 0.55, starSpeed: 1.0, orbitAlpha: 0.10, camera: { zoom: [1.000, 1.030], panX: 0, panY: -8 }, shake: null },
+        { tint: [16, 16, 13], starAlpha: 0.70, starSpeed: 1.2, orbitAlpha: 0.13, camera: { zoom: [1.012, 1.032], panX: 7, panY: 0 }, shake: null },
+        { tint: [12, 15, 20], starAlpha: 0.62, starSpeed: 0.9, orbitAlpha: 0.11, camera: { zoom: [1.018, 1.036], panX: 0, panY: 5 }, shake: null },
+        { tint: [20, 17, 12], starAlpha: 0.92, starSpeed: 1.8, orbitAlpha: 0.16, camera: { zoom: [1.020, 1.048], panX: -12, panY: 0 }, shake: null },
+        { tint: [22, 18, 12], starAlpha: 1.10, starSpeed: 2.2, orbitAlpha: 0.18, camera: { zoom: [1.024, 1.060], panX: 0, panY: 0 }, shake: { at: 5.29, power: 11 } },
+        { tint: [15, 16, 15], starAlpha: 0.68, starSpeed: 1.1, orbitAlpha: 0.12, camera: { zoom: [1.010, 1.030], panX: 9, panY: 4 }, shake: null },
+        { tint: [14, 15, 17], starAlpha: 0.76, starSpeed: 1.4, orbitAlpha: 0.13, camera: { zoom: [1.014, 1.046], panX: 0, panY: 0 }, shake: { at: 2.2, power: 7 } },
+        { tint: [13, 15, 18], starAlpha: 0.64, starSpeed: 1.0, orbitAlpha: 0.11, camera: { zoom: [1.020, 1.032], panX: -7, panY: 0 }, shake: null },
+        { tint: [18, 16, 12], starAlpha: 0.86, starSpeed: 1.6, orbitAlpha: 0.14, camera: { zoom: [1.016, 1.042], panX: 0, panY: -7 }, shake: null },
+        { tint: [22, 18, 13], starAlpha: 1.02, starSpeed: 2.0, orbitAlpha: 0.17, camera: { zoom: [1.020, 1.052], panX: 0, panY: 0 }, shake: { at: 2.6, power: 9 } },
+        { tint: [24, 20, 14], starAlpha: 1.15, starSpeed: 2.4, orbitAlpha: 0.19, camera: { zoom: [1.030, 1.070], panX: 0, panY: 0 }, shake: { at: 10.1, power: 13 } },
+        { tint: [17, 16, 13], starAlpha: 0.80, starSpeed: 0.7, orbitAlpha: 0.15, camera: { zoom: [1.040, 0.980], panX: 0, panY: 0 }, shake: null }
+      ];
+
       // ---- 确定性随机 ----
       function seeded(seed) {
         let state = seed >>> 0;
@@ -83,21 +99,32 @@
         return ease((time - start) / duration);
       }
 
-      // ---- 背景：深空 + 星点 + 轨道 + 行星（保持原氛围） ----
-      function drawBackground(time, beatSeconds, beatPhaseSeconds) {
+      // 金句弹跳：过冲衰减（确定性）
+      function bounceScale(localTime, start, power) {
+        const dt = localTime - start;
+        if (dt < 0) return 1;
+        const t = Math.min(1, dt / 0.55);
+        return 1 + power * (1 - t) * Math.cos(t * Math.PI * 3);
+      }
+
+      // ---- 背景：深空 + 星点 + 轨道 + 行星（色调/密度按场景驱动） ----
+      function drawBackground(time, beatSeconds, beatPhaseSeconds, style) {
+        const tint = style.tint;
         const gradient = ctx.createLinearGradient(0, 0, width, height);
-        gradient.addColorStop(0, "#080909");
-        gradient.addColorStop(0.54, "#11110f");
-        gradient.addColorStop(1, "#080a0b");
+        gradient.addColorStop(0, `rgb(${tint[0] - 6}, ${tint[1] - 6}, ${tint[2] - 8})`);
+        gradient.addColorStop(0.54, `rgb(${tint[0]}, ${tint[1]}, ${tint[2]})`);
+        gradient.addColorStop(1, `rgb(${tint[0] - 4}, ${tint[1] - 4}, ${tint[2] - 6})`);
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
 
+        const starBoost = style.starAlpha;
+        const starMul = style.starSpeed;
         for (const layer of starLayers) {
           for (const star of layer) {
-            const x = (star.x + time * star.speed * 18) % width;
+            const x = (star.x + time * star.speed * 18 * starMul) % width;
             const y = star.y + Math.sin(time * 0.12 + star.phase) * star.speed * 4;
             ctx.beginPath();
-            ctx.fillStyle = `rgba(226, 218, 197, ${star.alpha})`;
+            ctx.fillStyle = `rgba(226, 218, 197, ${Math.min(1, star.alpha * starBoost)})`;
             ctx.arc(x, y, star.radius, 0, Math.PI * 2);
             ctx.fill();
           }
@@ -106,7 +133,7 @@
         ctx.save();
         ctx.translate(1370 - time * 4, 760 + time * 1.5);
         ctx.rotate(-0.16);
-        ctx.strokeStyle = "rgba(195, 165, 107, 0.13)";
+        ctx.strokeStyle = `rgba(195, 165, 107, ${style.orbitAlpha})`;
         ctx.lineWidth = 1.4;
         for (let index = 0; index < 3; index += 1) {
           ctx.beginPath();
@@ -147,9 +174,15 @@
         ctx.restore();
       }
 
-      function drawHighlightedLine(parts, x, y, size, color, accent, alpha, family, weight, align) {
+      function drawHighlightedLine(parts, x, y, size, color, accent, alpha, family, weight, align, scale) {
         ctx.save();
         const parentAlpha = ctx.globalAlpha;
+        const sc = scale || 1;
+        if (sc !== 1) {
+          ctx.translate(x, y);
+          ctx.scale(sc, sc);
+          ctx.translate(-x, -y);
+        }
         ctx.textBaseline = "middle";
         const runs = parts.map((part) => {
           ctx.font = `${weight} ${size}px ${family}`;
@@ -720,7 +753,7 @@
         } else if (sceneIndex === 4) {
           drawText("但影响有多大？", width / 2, 358, 56, ivory, 0.92, serif, 500, "center");
           const doneAlpha = fadeIn(localTime, 5.6, 0.6);
-          drawHighlightedLine([{ text: "最多约一成", accent: true }], width / 2, 444, 66, ivory, gold, Math.min(0.98, doneAlpha), serif, 500, "center");
+          drawHighlightedLine([{ text: "最多约一成", accent: true }], width / 2, 444, 66, ivory, gold, Math.min(0.98, doneAlpha), serif, 500, "center", bounceScale(localTime, 5.29, 0.11));
           drawGrid10(localTime, timing.beatSeconds);
           if (localTime > 6.4) {
             drawText("年龄不是全部", width / 2, 905, 28, "#d8d2c5", fadeIn(localTime, 6.4, 0.5), '"Microsoft YaHei", sans-serif', 400, "center");
@@ -751,11 +784,11 @@
           drawText("越长大，时间越快？", width / 2, 426, 62, ivory, 0.9, serif, 500, "center");
           drawHighlightedLine([
             { text: "不是人人的定律", accent: true }
-          ], width / 2, 550, 78, ivory, gold, 0.98, serif, 500, "center");
+          ], width / 2, 550, 78, ivory, gold, 0.98, serif, 500, "center", bounceScale(localTime, 2.6, 0.10));
           drawPersonCurves();
         } else if (sceneIndex === 10) {
           drawText("人生有统一的心理中点吗？", width / 2, 414, 54, ivory, 0.9, serif, 500, "center");
-          drawHighlightedLine([{ text: "没有统一中点", accent: true }], width / 2, 530, 78, ivory, gold, 0.98, serif, 500, "center");
+          drawHighlightedLine([{ text: "没有统一中点", accent: true }], width / 2, 530, 78, ivory, gold, 0.98, serif, 500, "center", bounceScale(localTime, 1.2, 0.12));
           drawTimeline(localTime + 4);
           ctx.save();
           ctx.strokeStyle = "rgba(195, 165, 107, 0.55)";
@@ -775,7 +808,7 @@
             drawDialRipple(localTime, 0, timing.beatSeconds);
           } else {
             drawText("而我们", width / 2, 440, 66, ivory, endingAlpha, serif, 500, "center");
-            drawHighlightedLine([{ text: "给它留下感受", accent: true }], width / 2, 550, 82, ivory, gold, endingAlpha, serif, 500, "center");
+            drawHighlightedLine([{ text: "给它留下感受", accent: true }], width / 2, 550, 82, ivory, gold, endingAlpha, serif, 500, "center", 1 + 0.03 * ease((localTime - 5.2) / 6.5));
             drawDialRipple(localTime, fadeIn(localTime, 5.2, 0.8), timing.beatSeconds);
           }
         }
@@ -802,23 +835,43 @@
         ctx.restore();
       }
 
-      let sceneCutTimes = Array.from({ length: 11 }, (_, index) => (index + 1) * 10);
+      let sceneCutTimes = [10.374, 18.354, 26.334, 35.910, 49.476, 57.456, 67.830, 75.810, 84.588, 94.164, 107.730];
       let beatSeconds = 0.8;
       let beatPhaseSeconds = 0;
 
+      // ---- 场景镜头：推进 / 拉远 / 平移 / 反转冲击抖动（确定性） ----
+      function cameraForScene(sceneIndex, localTime, duration) {
+        const cam = SCENE_STYLE[sceneIndex].camera;
+        const t = duration <= 0 ? 0 : Math.max(0, Math.min(1, localTime / duration));
+        let zoom = cam.zoom[0] + (cam.zoom[1] - cam.zoom[0]) * ease(t);
+        let panX = cam.panX * (0.5 + 0.5 * Math.sin(Math.PI * 2 * t));
+        let panY = cam.panY * (0.5 + 0.5 * Math.cos(Math.PI * 2 * t));
+        const shake = SCENE_STYLE[sceneIndex].shake;
+        if (shake) {
+          const dt = localTime - shake.at;
+          if (dt >= 0 && dt < 0.55) {
+            const power = shake.power * (1 - dt / 0.55);
+            zoom += power * 0.0016 * Math.sin(dt * 170);
+            panX += power * Math.sin(dt * 233);
+            panY += power * Math.cos(dt * 187);
+          }
+        }
+        return { zoom, panX, panY };
+      }
+
       function drawAt(seconds) {
         const time = Math.max(0, Math.min(120, seconds));
-        const camera = 1 + 0.022 * ease(time / 120);
-        ctx.save();
-        ctx.translate(width / 2, height / 2);
-        ctx.scale(camera, camera);
-        ctx.translate(-width / 2, -height / 2);
-        drawBackground(time, beatSeconds, beatPhaseSeconds);
         let sceneIndex = 0;
         while (sceneIndex < sceneCutTimes.length && time >= sceneCutTimes[sceneIndex]) sceneIndex += 1;
         const sceneStart = sceneIndex === 0 ? 0 : sceneCutTimes[sceneIndex - 1];
         const sceneEnd = sceneIndex < sceneCutTimes.length ? sceneCutTimes[sceneIndex] : 120;
         const sceneTime = time - sceneStart;
+        const cam = cameraForScene(sceneIndex, sceneTime, sceneEnd - sceneStart);
+        ctx.save();
+        ctx.translate(width / 2 + cam.panX, height / 2 + cam.panY);
+        ctx.scale(cam.zoom, cam.zoom);
+        ctx.translate(-width / 2, -height / 2);
+        drawBackground(time, beatSeconds, beatPhaseSeconds, SCENE_STYLE[sceneIndex]);
         drawScene(sceneIndex, sceneTime, {
           duration: sceneEnd - sceneStart,
           beatSeconds,

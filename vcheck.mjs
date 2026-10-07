@@ -7,7 +7,7 @@ const root = dirname(fileURLToPath(import.meta.url));
 const outDir = join(root, ".vcheck");
 const edgePath = process.env.EDGE_PATH || "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 
-const sceneCuts = [9.91, 19.49, 29.06, 38.64, 51.41, 60.99, 70.57, 80.15, 89.73, 99.31, 108.88];
+const sceneCuts = [10.374, 18.354, 26.334, 35.910, 49.476, 57.456, 67.830, 75.810, 84.588, 94.164, 107.730];
 const bounds = [0, ...sceneCuts, 120];
 const times = bounds.slice(0, -1).map((start, i) => (start + bounds[i + 1]) / 2);
 

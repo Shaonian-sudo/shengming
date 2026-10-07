@@ -17,6 +17,7 @@ const duration = Number(option("--duration", "10"));
 const outputPath = resolve(root, option("--output", "sample_10s.mp4"));
 const stillsOnly = args.includes("--stills-only");
 const musicPath = resolve(root, option("--music", "运气的形状_BGM.mp3"));
+const customCuts = option("--cuts", "");
 const frameRate = 30;
 const frameCount = Math.round(duration * frameRate);
 const edgePath = process.env.EDGE_PATH || "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
@@ -130,10 +131,13 @@ let timing = {
 };
 if (duration > 10) {
   const analysis = await analyzeMusic(musicPath);
+  const parsedCuts = customCuts.split(",").map((part) => Number(part.trim())).filter(Number.isFinite);
   timing = {
     beatSeconds: analysis.beatSeconds,
     beatPhaseSeconds: analysis.beatPhaseSeconds,
-    sceneCutTimes: chooseSceneCuts(analysis, duration)
+    sceneCutTimes: parsedCuts.length === 11
+      ? parsedCuts
+      : chooseSceneCuts(analysis, duration)
   };
   console.log(`BGM analysis: ${analysis.selectedBpm} BPM; scene cuts at ${timing.sceneCutTimes.map((time) => time.toFixed(2)).join(", ")} seconds.`);
   console.log(`Source BGM is ${analysis.durationSeconds}s; the film uses the first ${duration}s with a 2s fade-out.`);
