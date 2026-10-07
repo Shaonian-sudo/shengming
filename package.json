@@ -1,0 +1,12 @@
+{
+  "name": "vibe-time-perception-film",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs",
+    "analyze:bgm": "node analyze-bgm.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}
