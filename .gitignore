@@ -5,6 +5,11 @@ node_modules/
 stills/
 stills_full/
 .frames-*/
+.vcheck/
+.verify/
 
 # debug logs
 debug.log
+
+# licensed BGM (not committed)
+运气的形状_BGM.mp3

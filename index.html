@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>人生的中点｜开场样片</title>
+  <title>人生的中点｜视觉强化版</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -21,7 +21,7 @@
   </style>
 </head>
 <body>
-  <canvas id="frame" width="1920" height="1080" aria-label="人生的中点，开场样片"></canvas>
+  <canvas id="frame" width="1920" height="1080" aria-label="人生的中点，视觉强化版"></canvas>
   <script>
     (() => {
       const canvas = document.getElementById("frame");
@@ -37,6 +37,7 @@
       ];
       const grain = makeStars(0xc310a9f1, 360, 0, 0.15, 0.8);
 
+      // ---- 确定性随机 ----
       function seeded(seed) {
         let state = seed >>> 0;
         return () => {
@@ -60,6 +61,19 @@
         }));
       }
 
+      // 确定性洗牌（固定种子）
+      function seededShuffle(seed, count) {
+        const random = seeded(seed);
+        const array = Array.from({ length: count }, (_, i) => i);
+        for (let i = array.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(random() * (i + 1));
+          const tmp = array[i];
+          array[i] = array[j];
+          array[j] = tmp;
+        }
+        return array;
+      }
+
       function ease(value) {
         const t = Math.max(0, Math.min(1, value));
         return t * t * (3 - 2 * t);
@@ -69,6 +83,7 @@
         return ease((time - start) / duration);
       }
 
+      // ---- 背景：深空 + 星点 + 轨道 + 行星（保持原氛围） ----
       function drawBackground(time, beatSeconds, beatPhaseSeconds) {
         const gradient = ctx.createLinearGradient(0, 0, width, height);
         gradient.addColorStop(0, "#080909");
@@ -118,6 +133,7 @@
         ctx.fill();
       }
 
+      // ---- 文字工具 ----
       function drawText(text, x, y, size, color, alpha, family, weight, align) {
         ctx.save();
         ctx.globalAlpha *= alpha;
@@ -167,37 +183,6 @@
         ctx.restore();
       }
 
-      function drawGrain(time) {
-        const random = seeded(0x6d2b79f5 ^ Math.floor(time * 30));
-        ctx.save();
-        for (const mark of grain) {
-          const x = Math.floor(random() * width);
-          const y = Math.floor(random() * height);
-          const light = random() > 0.5 ? 232 : 34;
-          ctx.fillStyle = `rgba(${light}, ${light}, ${light}, ${0.035 + random() * 0.055})`;
-          ctx.fillRect(x, y, 1, 1);
-        }
-        ctx.restore();
-      }
-
-      function drawOrbitCard(time, title, subtitle, progress, accent = gold) {
-        drawText(title, width / 2, 404, 72, ivory, 0.95, '"Songti SC", "SimSun", serif', 500, "center");
-        drawText(subtitle, width / 2, 500, 30, "#bcb5a6", 0.84, '"Microsoft YaHei", sans-serif', 400, "center");
-        ctx.save();
-        ctx.globalAlpha *= 0.75;
-        ctx.strokeStyle = "rgba(195, 165, 107, 0.28)";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.ellipse(width / 2, 710, 340, 78, -0.08, Math.PI, Math.PI * (1 + progress));
-        ctx.stroke();
-        const markerX = width / 2 - 340 + 680 * progress;
-        ctx.fillStyle = accent;
-        ctx.beginPath();
-        ctx.arc(markerX, 710 - Math.sin(progress * Math.PI) * 26, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
       function drawCaption(parts, time, line = 0) {
         const alpha = fadeIn(time, 0.2, 0.4);
         drawHighlightedLine(
@@ -214,6 +199,20 @@
         );
       }
 
+      function drawGrain(time) {
+        const random = seeded(0x6d2b79f5 ^ Math.floor(time * 30));
+        ctx.save();
+        for (const mark of grain) {
+          const x = Math.floor(random() * width);
+          const y = Math.floor(random() * height);
+          const light = random() > 0.5 ? 232 : 34;
+          ctx.fillStyle = `rgba(${light}, ${light}, ${light}, ${0.035 + random() * 0.055})`;
+          ctx.fillRect(x, y, 1, 1);
+        }
+        ctx.restore();
+      }
+
+      // ---- 时间轴（S6 / S11 共用） ----
       function drawTimeline(time) {
         const left = 340;
         const right = 1580;
@@ -247,40 +246,434 @@
         ctx.restore();
       }
 
-      function drawVarianceChart(progress) {
-        const x = 360;
-        const y = 668;
-        const barWidth = 1200;
+      // ============ 新增：各场景差异化母题 ============
+
+      // S1 背景：飘过的年龄数字
+      const ageStreamItems = (() => {
+        const random = seeded(0xa11ce5);
+        const values = [4, 5, 6, 8, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 94];
+        return Array.from({ length: 22 }, (_, index) => ({
+          value: values[index % values.length],
+          x: random() * width,
+          y: 150 + random() * 820,
+          size: 44 + random() * 96,
+          speed: 6 + random() * 16,
+          alpha: 0.035 + random() * 0.05
+        }));
+      })();
+      function drawAgeStream(time) {
         ctx.save();
-        ctx.fillStyle = "rgba(238, 232, 219, 0.11)";
-        ctx.fillRect(x, y, barWidth, 20);
-        ctx.fillStyle = "rgba(195, 165, 107, 0.82)";
-        ctx.fillRect(x, y, barWidth * 0.1 * ease(progress), 20);
-        ctx.strokeStyle = "rgba(195, 165, 107, 0.35)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x + barWidth * 0.1, y - 18);
-        ctx.lineTo(x + barWidth * 0.1, y + 38);
-        ctx.stroke();
-        drawText("约 10%", x + barWidth * 0.1 + 18, y - 42, 26, gold, 0.9, '"Microsoft YaHei", sans-serif', 500);
+        for (const item of ageStreamItems) {
+          const x = (item.x - time * item.speed) % (width + 200);
+          const px = ((x % (width + 200)) + (width + 200)) % (width + 200) - 100;
+          ctx.globalAlpha = item.alpha;
+          ctx.fillStyle = gold;
+          ctx.font = `300 ${item.size}px "Times New Roman", "Songti SC", serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(String(item.value), px, item.y);
+        }
         ctx.restore();
       }
 
-      function drawWave(time) {
+      // S2 悬停光点 + 波纹（"先别急着回答"）
+      function drawHoverPulse(localTime, beatSeconds) {
+        const cx = width / 2;
+        const cy = 706;
+        const pulse = 0.7 + 0.3 * (0.5 + 0.5 * Math.cos(localTime * Math.PI * 2 / beatSeconds));
+        const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, 46);
+        glow.addColorStop(0, `rgba(227, 205, 157, ${0.55 * pulse})`);
+        glow.addColorStop(1, "rgba(227, 205, 157, 0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 46, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(238, 232, 219, 0.9)";
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fill();
+        // 外扩波纹两圈
+        for (let ring = 0; ring < 2; ring += 1) {
+          const r = ((localTime * 46 + ring * 70) % 150) + 20;
+          ctx.strokeStyle = `rgba(195, 165, 107, ${(1 - (r - 20) / 150) * 0.3})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // S3 左：表盘（此刻流逝） / 右：胶片条（回想时长）
+      function drawClockDial(cx, cy, radius, time) {
         ctx.save();
-        ctx.strokeStyle = "rgba(195, 165, 107, 0.8)";
+        ctx.strokeStyle = "rgba(195, 165, 107, 0.55)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1.4;
+        for (let tick = 0; tick < 12; tick += 1) {
+          const angle = -Math.PI / 2 + tick * Math.PI * 2 / 12;
+          const long = tick % 3 === 0;
+          const outer = radius - (long ? 18 : 10);
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+          ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+          ctx.stroke();
+        }
+        const handAngle = -Math.PI / 2 + time * 1.1;
+        ctx.strokeStyle = "rgba(238, 232, 219, 0.85)";
         ctx.lineWidth = 3;
         ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(handAngle) * (radius - 30), cy + Math.sin(handAngle) * (radius - 30));
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawFilmStrip(cx, cy, widthStrip, heightStrip, time) {
+        ctx.save();
+        const frameCount = 12;
+        const gap = 10;
+        const frameW = (widthStrip - gap * (frameCount + 1)) / frameCount;
+        const top = cy - heightStrip / 2;
+        const active = Math.floor(time * 2.2) % frameCount;
+        for (let i = 0; i < frameCount; i += 1) {
+          const x = cx - widthStrip / 2 + gap + i * (frameW + gap);
+          ctx.fillStyle = i === active
+            ? "rgba(195, 165, 107, 0.75)"
+            : "rgba(238, 232, 219, 0.14)";
+          ctx.fillRect(x, top, frameW, heightStrip);
+          ctx.strokeStyle = "rgba(195, 165, 107, 0.4)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x, top, frameW, heightStrip);
+        }
+        // 胶片孔
+        ctx.fillStyle = "rgba(238, 232, 219, 0.5)";
+        for (let i = 0; i < frameCount + 1; i += 1) {
+          const x = cx - widthStrip / 2 + gap / 2 + i * (frameW + gap);
+          ctx.fillRect(x - 4, top - 14, 8, 8);
+          ctx.fillRect(x - 4, top + heightStrip + 6, 8, 8);
+        }
+        ctx.restore();
+      }
+
+      // S4 散点图：499 位参与者（示意分布）
+      const scatterPoints = (() => {
+        const random = seeded(0x5c477e);
+        return Array.from({ length: 499 }, () => {
+          const age = 14 + random() * 80;
+          const trend = 0.24 + 0.2 * (age - 14) / 80;
+          const value = Math.max(0.02, Math.min(0.98, trend + (random() - 0.5) * 0.6));
+          return { age, value };
+        });
+      })();
+      function drawScatter(localTime) {
+        const left = 240;
+        const right = 1540;
+        const baseY = 800;
+        const progress = Math.max(0, Math.min(1, (localTime - 0.8) / 4.5));
+        const visible = Math.floor(scatterPoints.length * progress);
+        ctx.save();
+        for (let i = 0; i < scatterPoints.length; i += 1) {
+          const point = scatterPoints[i];
+          const px = left + (point.age - 14) / 80 * (right - left);
+          const py = baseY - point.value * 250;
+          const lit = i < visible;
+          ctx.fillStyle = lit ? `rgba(195, 165, 107, ${0.8})` : "rgba(238, 232, 219, 0.07)";
+          ctx.beginPath();
+          ctx.arc(px, py, lit ? 3 : 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = "rgba(238, 232, 219, 0.22)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(left, baseY);
+        ctx.lineTo(right, baseY);
+        ctx.stroke();
+        drawText("14", left, baseY + 26, 20, "#bcb5a6", 0.7, '"Microsoft YaHei", sans-serif', 400, "center");
+        drawText("94", right, baseY + 26, 20, "#bcb5a6", 0.7, '"Microsoft YaHei", sans-serif', 400, "center");
+        ctx.restore();
+      }
+
+      // S5 100 格矩阵：反转①（只留一成）
+      const gridOrder = seededShuffle(0x9e11de, 100);
+      const gridKeep = gridOrder.slice(0, 10);
+      function drawGrid10(localTime, beatSeconds) {
+        const size = 30;
+        const gap = 2;
+        const left = width / 2 - (size + gap) * 5;
+        const top = 460;
+        const beatIndex = Math.max(0, Math.floor((localTime - 0.5) / beatSeconds));
+        const litCount = Math.min(100, 4 + beatIndex * 16);
+        const done = litCount >= 100;
+        ctx.save();
+        for (let i = 0; i < 100; i += 1) {
+          const row = Math.floor(i / 10);
+          const col = i % 10;
+          const x = left + col * (size + gap);
+          const y = top + row * (size + gap);
+          const orderIndex = gridOrder.indexOf(i);
+          let alpha = 0.07;
+          if (done) {
+            const breathe = 0.78 + 0.16 * (0.5 + 0.5 * Math.cos(localTime * Math.PI * 2 / beatSeconds));
+            alpha = gridKeep.includes(i) ? breathe : 0.08;
+          } else if (orderIndex < litCount) {
+            alpha = 0.85;
+          }
+          ctx.fillStyle = `rgba(195, 165, 107, ${alpha})`;
+          ctx.fillRect(x, y, size, size);
+          if (alpha > 0.5) {
+            ctx.strokeStyle = "rgba(238, 232, 219, 0.25)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+          }
+        }
+        if (done) {
+          drawText("约 10%", width / 2, top + (size + gap) * 10 + 26, 30, gold, 0.9, '"Microsoft YaHei", sans-serif', 500, "center");
+        }
+        ctx.restore();
+      }
+
+      // S6 经验抽样：时间轴采样点
+      const samplePoints = (() => {
+        const random = seeded(0x5a9e17);
+        return Array.from({ length: 24 }, () => ({
+          ratio: 0.03 + random() * 0.94,
+          offset: -38 + random() * 76
+        }));
+      })();
+      function drawSamplePulse(localTime, beatSeconds) {
+        const left = 340;
+        const right = 1580;
+        const y = 674;
+        const beatIndex = Math.max(0, Math.floor((localTime - 0.5) / beatSeconds));
+        ctx.save();
+        samplePoints.forEach((point, index) => {
+          const lit = index < beatIndex && index < samplePoints.length;
+          const px = left + (right - left) * point.ratio;
+          const py = y + point.offset;
+          ctx.fillStyle = lit ? "rgba(195, 165, 107, 0.9)" : "rgba(238, 232, 219, 0.06)";
+          ctx.beginPath();
+          ctx.arc(px, py, lit ? 4 : 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          if (lit) {
+            const glow = ctx.createRadialGradient(px, py, 1, px, py, 16);
+            glow.addColorStop(0, "rgba(195, 165, 107, 0.35)");
+            glow.addColorStop(1, "rgba(195, 165, 107, 0)");
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(px, py, 16, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+        ctx.restore();
+      }
+
+      // S7 分布重叠：两组差异不显著（示意正态分布）
+      function gaussian(x, mean, sigma) {
+        return Math.exp(-((x - mean) * (x - mean)) / (2 * sigma * sigma));
+      }
+      function drawOverlap(localTime) {
+        const left = 500;
+        const right = 1420;
+        const baseY = 712;
+        const amp = 200;
+        const progress = Math.max(0, Math.min(1, (localTime - 0.5) / 1.6));
+        ctx.save();
+        const groups = [
+          { mean: 930, sigma: 190, color: "195, 165, 107", fromLeft: true },
+          { mean: 990, sigma: 190, color: "238, 232, 219", fromLeft: false }
+        ];
+        for (const group of groups) {
+          const visibleLeft = group.fromLeft ? left : right - progress * (right - left);
+          const visibleRight = group.fromLeft ? left + progress * (right - left) : right;
+          ctx.beginPath();
+          ctx.moveTo(left, baseY);
+          for (let px = left; px <= right; px += 4) {
+            if (px < visibleLeft || px > visibleRight) continue;
+            const y = baseY - amp * gaussian(px, group.mean, group.sigma);
+            ctx.lineTo(px, y);
+          }
+          ctx.lineTo(right, baseY);
+          ctx.closePath();
+          ctx.fillStyle = `rgba(${group.color}, 0.12)`;
+          ctx.fill();
+          ctx.strokeStyle = `rgba(${group.color}, 0.85)`;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          let started = false;
+          for (let px = left; px <= right; px += 4) {
+            if (px < visibleLeft || px > visibleRight) continue;
+            const y = baseY - amp * gaussian(px, group.mean, group.sigma);
+            if (!started) { ctx.moveTo(px, y); started = true; } else { ctx.lineTo(px, y); }
+          }
+          ctx.stroke();
+        }
+        ctx.strokeStyle = "rgba(238, 232, 219, 0.2)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(left, baseY);
+        ctx.lineTo(right, baseY);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // S8 双轨：客观钟表 vs 主观感受
+      function drawDualTracks(localTime) {
+        ctx.save();
+        // 直线：客观刻度
+        ctx.strokeStyle = "rgba(238, 232, 219, 0.6)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(400, 664);
+        ctx.lineTo(1520, 664);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(238, 232, 219, 0.35)";
+        ctx.lineWidth = 1.4;
+        for (let x = 400; x <= 1520; x += 80) {
+          ctx.beginPath();
+          ctx.moveTo(x, 652);
+          ctx.lineTo(x, 676);
+          ctx.stroke();
+        }
+        drawText("客观的钟表", 1520, 640, 22, "#bcb5a6", 0.75, '"Microsoft YaHei", sans-serif', 400, "right");
+        // 波浪：主观感受
+        ctx.strokeStyle = `rgba(195, 165, 107, 0.85)`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let x = 400; x <= 1520; x += 5) {
+          const y = 752 + Math.sin(x * 0.02 + localTime * 1.5) * 44 + Math.sin(x * 0.006 + localTime * 0.4) * 18;
+          if (x === 400) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        drawText("主观的感受", 1520, 838, 22, "#bcb5a6", 0.75, '"Microsoft YaHei", sans-serif', 400, "right");
+        ctx.restore();
+      }
+
+      // S9 双波：情绪（低频大波） + 注意力（高频小波）
+      function drawDualWaves(localTime) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(195, 165, 107, 0.9)`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
         for (let x = 380; x <= 1540; x += 5) {
-          const phase = (x - 380) / 1160 * Math.PI * 5 + time * 1.2;
-          const y = 650 + Math.sin(phase) * (18 + 8 * Math.sin(phase * 0.22));
+          const y = 650 + Math.sin(x * 0.008 + localTime * 0.8) * 88;
           if (x === 380) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
+        ctx.strokeStyle = `rgba(238, 232, 219, 0.75)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let x = 380; x <= 1540; x += 5) {
+          const y = 650 + Math.sin(x * 0.03 + localTime * 2.2) * 22;
+          if (x === 380) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        drawText("情绪", 420, 512, 30, gold, 0.9, '"Microsoft YaHei", sans-serif', 500, "left");
+        drawText("注意力", 1500, 512, 30, ivory, 0.85, '"Microsoft YaHei", sans-serif', 500, "right");
         ctx.restore();
       }
 
+      // S10 多条个人曲线：不是人人适用的定律（示意）
+      const personCurves = (() => {
+        const random = seeded(0x10c0ff);
+        return Array.from({ length: 7 }, (_, index) => ({
+          base: 0.34 + random() * 0.32,
+          k: -0.18 + random() * 0.62,
+          p: 0.7 + random() * 0.7,
+          phase: random() * Math.PI * 2,
+          alpha: 0.45 + random() * 0.4,
+          color: index % 2 === 0 ? gold : ivory
+        }));
+      })();
+      function drawPersonCurves() {
+        ctx.save();
+        ctx.lineWidth = 2.5;
+        personCurves.forEach((curve) => {
+          ctx.strokeStyle = curve.color;
+          ctx.globalAlpha = curve.alpha;
+          ctx.beginPath();
+          for (let px = 380; px <= 1540; px += 5) {
+            const t = (px - 380) / 1160;
+            const y = 806 - (curve.base + curve.k * Math.pow(t, curve.p) + Math.sin(t * 7 + curve.phase) * 0.04) * 235;
+            if (px === 380) ctx.moveTo(px, y);
+            else ctx.lineTo(px, y);
+          }
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      // S11 散落的中点：没有统一中点
+      const midPoints = (() => {
+        const random = seeded(0x11b10c);
+        return Array.from({ length: 16 }, () => ({
+          ratio: 0.08 + random() * 0.84,
+          landY: 674 + (random() - 0.5) * 150
+        }));
+      })();
+      function drawMidpoints(localTime, beatSeconds) {
+        ctx.save();
+        midPoints.forEach((point, index) => {
+          const appear = 0.5 + index * beatSeconds * 0.8;
+          const rawFall = (localTime - appear) / 0.55;
+          if (rawFall <= 0) return;
+          const fall = ease(Math.min(1, rawFall));
+          const px = 340 + (1580 - 340) * point.ratio;
+          const py = 430 + (point.landY - 430) * fall;
+          const glow = ctx.createRadialGradient(px, py, 1, px, py, 26);
+          glow.addColorStop(0, "rgba(195, 165, 107, 0.5)");
+          glow.addColorStop(1, "rgba(195, 165, 107, 0)");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(px, py, 26, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = gold;
+          ctx.beginPath();
+          ctx.arc(px, py, 5.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(195, 165, 107, 0.35)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px, 674);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      // S12 表盘 → 涟漪
+      function drawDialRipple(localTime, phase2, beatSeconds) {
+        const cx = width / 2;
+        const cy = 742;
+        const fadeDial = 1 - ease((localTime - 5.2) / 0.8);
+        if (fadeDial > 0) {
+          ctx.save();
+          ctx.globalAlpha *= fadeDial;
+          drawClockDial(cx, cy, 138, localTime);
+          ctx.restore();
+        }
+        if (phase2 > 0) {
+          ctx.save();
+          for (let ring = 0; ring < 5; ring += 1) {
+            const start = 0.15 + ring * beatSeconds * 0.55;
+            const age = ease((localTime - 5.2 - start) / 0.9);
+            if (age <= 0 || age >= 1) continue;
+            ctx.strokeStyle = `rgba(195, 165, 107, ${(1 - age) * 0.4})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 10 + age * 240, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+
+      // ---- 场景绘制 ----
       function drawScene(sceneIndex, localTime, timing) {
         const enter = fadeIn(localTime, 0, 0.65);
         const leave = 1 - ease((localTime - (timing.duration - 0.65)) / 0.65);
@@ -291,6 +684,7 @@
         const progress = Math.max(0, Math.min(1, localTime / timing.duration));
 
         if (sceneIndex === 0) {
+          drawAgeStream(localTime);
           const questionAlpha = 1 - ease((localTime - timing.snapBeat(3.15)) / 0.85);
           const answerAlpha = fadeIn(localTime, timing.snapBeat(4.0), 0.85);
           drawText("人 生 的 中 点", 152, 166, 23, gold, fadeIn(localTime, 0.15, 1.1), '"Songti SC", "SimSun", serif', 400);
@@ -305,91 +699,60 @@
             { text: "变老", accent: true },
             { text: "了吗？" }
           ], 152, 572, 100, ivory, gold, answerAlpha, serif, 500);
-          if (localTime < 4) {
-            drawCaption([{ text: "你觉得时间" }, { text: "越来越快", accent: true }], localTime);
-            drawCaption([{ text: "真的是因为你" }, { text: "变老", accent: true }, { text: "了吗？" }], localTime, 1);
-          } else {
-            drawCaption([{ text: "真的是因为你" }], localTime);
-            drawCaption([{ text: "变老", accent: true }, { text: "了吗？" }], localTime, 1);
-          }
         } else if (sceneIndex === 1) {
-          drawOrbitCard(localTime, "先别急着回答", "同一问题，两种时间感", progress);
-          drawCaption([{ text: "先别急着回答", accent: true }], localTime);
+          drawText("先别急着回答", width / 2, 404, 72, ivory, 0.95, serif, 500, "center");
+          drawText("同一问题，两种时间感", width / 2, 500, 30, "#bcb5a6", 0.84, '"Microsoft YaHei", sans-serif', 400, "center");
+          drawHoverPulse(localTime, timing.beatSeconds);
         } else if (sceneIndex === 2) {
           drawText("此刻流逝", 480, 486, 72, ivory, 0.95, serif, 500, "center");
           drawText("≠", 960, 486, 82, gold, 0.95, serif, 400, "center");
           drawText("回想时长", 1440, 486, 72, ivory, 0.95, serif, 500, "center");
-          ctx.save();
-          ctx.strokeStyle = "rgba(195, 165, 107, 0.45)";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.ellipse(480, 708, 240, 55, -0.08, 0, Math.PI * 2);
-          ctx.ellipse(1440, 708, 240, 55, 0.08, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
+          drawClockDial(480, 700, 148, localTime);
+          drawFilmStrip(1440, 700, 430, 84, localTime);
           drawCaption([{ text: "两道不同的问题", accent: true }], localTime);
         } else if (sceneIndex === 3) {
           drawText("2005", 350, 434, 150, gold, 0.95, '"Times New Roman", "Songti SC", serif', 400);
           drawText("499 位参与者", 1080, 414, 66, ivory, 0.95, serif, 500, "center");
           drawText("年龄 14—94 岁", 1080, 502, 36, "#bcb5a6", 0.88, '"Microsoft YaHei", sans-serif', 400, "center");
           drawText("Wittmann  /  Lehnhoff", 1080, 584, 22, gold, 0.76, '"Times New Roman", serif', 400, "center");
-          ctx.save();
-          ctx.strokeStyle = "rgba(195, 165, 107, 0.48)";
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(350, 530);
-          ctx.lineTo(600, 530);
-          ctx.stroke();
-          ctx.restore();
+          drawScatter(localTime);
           drawCaption([{ text: "年龄与时间感", accent: true }, { text: "有关联" }], localTime);
         } else if (sceneIndex === 4) {
-          drawText("但影响有多大？", width / 2, 432, 64, ivory, 0.92, serif, 500, "center");
-          drawHighlightedLine([{ text: "最多约一成", accent: true }], width / 2, 544, 74, ivory, gold, 0.98, serif, 500, "center");
-          drawVarianceChart(progress);
-          drawCaption([{ text: "年龄不是全部", accent: true }], localTime);
+          drawText("但影响有多大？", width / 2, 358, 56, ivory, 0.92, serif, 500, "center");
+          const doneAlpha = fadeIn(localTime, 5.6, 0.6);
+          drawHighlightedLine([{ text: "最多约一成", accent: true }], width / 2, 444, 66, ivory, gold, Math.min(0.98, doneAlpha), serif, 500, "center");
+          drawGrid10(localTime, timing.beatSeconds);
+          if (localTime > 6.4) {
+            drawText("年龄不是全部", width / 2, 905, 28, "#d8d2c5", fadeIn(localTime, 6.4, 0.5), '"Microsoft YaHei", sans-serif', 400, "center");
+          }
         } else if (sceneIndex === 5) {
           drawText("把问题放进日常", width / 2, 422, 72, ivory, 0.95, serif, 500, "center");
           drawText("经验抽样｜记录当下感受", width / 2, 518, 30, "#bcb5a6", 0.84, '"Microsoft YaHei", sans-serif', 400, "center");
           drawTimeline(localTime);
+          drawSamplePulse(localTime, timing.beatSeconds);
           drawCaption([{ text: "不只在实验室里问", accent: true }], localTime);
         } else if (sceneIndex === 6) {
-          drawText("2016", 340, 420, 128, gold, 0.95, '"Times New Roman", "Songti SC", serif', 400);
-          drawText("年轻人", 910, 442, 56, ivory, 0.94, serif, 500, "center");
-          drawText("年长者", 1320, 442, 56, ivory, 0.94, serif, 500, "center");
-          ctx.save();
-          ctx.strokeStyle = "rgba(195, 165, 107, 0.62)";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(870, 536);
-          ctx.lineTo(1360, 536);
-          ctx.moveTo(870, 554);
-          ctx.lineTo(1360, 554);
-          ctx.stroke();
-          ctx.restore();
-          drawText("流逝感差异不显著", 1115, 630, 28, gold, 0.88, '"Microsoft YaHei", sans-serif', 400, "center");
-          drawText("Droit-Volet · 2016", 1115, 694, 18, "#a9a18f", 0.76, '"Times New Roman", serif', 400, "center");
-          drawCaption([{ text: "两组差异不显著", accent: true }], localTime);
+          drawText("2016", 340, 400, 120, gold, 0.95, '"Times New Roman", "Songti SC", serif', 400);
+          drawText("年轻人", 780, 428, 44, ivory, 0.94, serif, 500, "center");
+          drawText("年长者", 1140, 428, 44, ivory, 0.94, serif, 500, "center");
+          drawOverlap(localTime);
+          drawText("流逝感差异不显著", width / 2, 800, 30, gold, 0.9, '"Microsoft YaHei", sans-serif', 400, "center");
+          drawText("Droit-Volet · 2016", width / 2, 850, 18, "#a9a18f", 0.8, '"Times New Roman", serif', 400, "center");
         } else if (sceneIndex === 7) {
           drawText("时间流逝感", 540, 470, 58, ivory, 0.95, serif, 500, "center");
           drawText("≠", 960, 470, 78, gold, 0.95, serif, 400, "center");
           drawText("时长估计", 1380, 470, 58, ivory, 0.95, serif, 500, "center");
           drawText("两种判断，彼此有关却不相同", width / 2, 578, 27, "#bcb5a6", 0.8, '"Microsoft YaHei", sans-serif', 400, "center");
-          drawCaption([{ text: "流逝感", accent: true }, { text: "不等于" }, { text: "时长", accent: true }], localTime);
+          drawDualTracks(localTime);
         } else if (sceneIndex === 8) {
           drawText("感受，也会改变时间", width / 2, 430, 62, ivory, 0.94, serif, 500, "center");
-          drawWave(localTime);
-          drawHighlightedLine([
-            { text: "情绪", accent: true },
-            { text: "     ·     " },
-            { text: "注意力", accent: true }
-          ], width / 2, 748, 34, ivory, gold, 0.94, '"Microsoft YaHei", sans-serif', 400, "center");
-          drawCaption([{ text: "情绪与注意", accent: true }], localTime);
+          drawDualWaves(localTime);
         } else if (sceneIndex === 9) {
           drawText("越长大，时间越快？", width / 2, 426, 62, ivory, 0.9, serif, 500, "center");
           drawHighlightedLine([
             { text: "不是人人的定律", accent: true }
           ], width / 2, 550, 78, ivory, gold, 0.98, serif, 500, "center");
-          drawCaption([{ text: "不是人人适用的定律", accent: true }], localTime);
+          drawPersonCurves();
         } else if (sceneIndex === 10) {
           drawText("人生有统一的心理中点吗？", width / 2, 414, 54, ivory, 0.9, serif, 500, "center");
           drawHighlightedLine([{ text: "没有统一中点", accent: true }], width / 2, 530, 78, ivory, gold, 0.98, serif, 500, "center");
@@ -402,20 +765,40 @@
           ctx.lineTo(width / 2, 724);
           ctx.stroke();
           ctx.restore();
+          drawMidpoints(localTime, timing.beatSeconds);
           drawCaption([{ text: "研究没有找到人人相同的中点", accent: true }], localTime);
         } else {
           const endingAlpha = 1 - ease((localTime - 8.9) / 1.1);
           if (localTime < 5.2) {
             drawText("钟表把时间", width / 2, 465, 82, ivory, 0.95, serif, 500, "center");
             drawHighlightedLine([{ text: "分成刻度", accent: true }], width / 2, 570, 82, ivory, gold, 0.98, serif, 500, "center");
-            drawCaption([{ text: "钟表把时间分成刻度", accent: true }], localTime);
+            drawDialRipple(localTime, 0, timing.beatSeconds);
           } else {
             drawText("而我们", width / 2, 440, 66, ivory, endingAlpha, serif, 500, "center");
             drawHighlightedLine([{ text: "给它留下感受", accent: true }], width / 2, 550, 82, ivory, gold, endingAlpha, serif, 500, "center");
-            drawCaption([{ text: "你给时间留下感受", accent: true }], localTime);
+            drawDialRipple(localTime, fadeIn(localTime, 5.2, 0.8), timing.beatSeconds);
           }
         }
 
+        ctx.restore();
+      }
+
+      // ---- 切场扫光（统一转场） ----
+      function drawSweep(time, sceneCutTimes) {
+        ctx.save();
+        for (const cut of sceneCutTimes) {
+          const local = time - cut;
+          if (local < -0.55 || local > 0.55) continue;
+          const tp = (local + 0.55) / 1.1;
+          const x = -320 + 2560 * ease(tp);
+          const alpha = Math.sin(Math.PI * tp) * 0.1;
+          const gradient = ctx.createLinearGradient(x, 0, x + 260, 0);
+          gradient.addColorStop(0, `rgba(195, 165, 107, ${alpha})`);
+          gradient.addColorStop(0.5, `rgba(195, 165, 107, ${alpha * 0.55})`);
+          gradient.addColorStop(1, "rgba(195, 165, 107, 0)");
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x, 0, 260, height);
+        }
         ctx.restore();
       }
 
@@ -438,6 +821,8 @@
         const sceneTime = time - sceneStart;
         drawScene(sceneIndex, sceneTime, {
           duration: sceneEnd - sceneStart,
+          beatSeconds,
+          beatPhaseSeconds,
           snapBeat: (seconds) => {
             const absoluteTarget = sceneStart + seconds;
             const beatIndex = Math.round((absoluteTarget - beatPhaseSeconds) / beatSeconds);
@@ -446,6 +831,7 @@
         });
 
         ctx.restore();
+        drawSweep(time, sceneCutTimes);
         drawGrain(time);
         const fade = time < 0.6 ? 1 - ease(time / 0.6) : 0;
         if (fade > 0) {
